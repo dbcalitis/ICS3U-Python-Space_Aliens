@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-# Created by: Mr. Coxall
-# Created on: July 2020
+# Created by: Daria Bernice Calitis
+# Created on: Oct 2021
 # This program is the "Space Aliens" program on the PyBadge
 
 import ugame
