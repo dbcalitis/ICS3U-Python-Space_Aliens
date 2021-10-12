@@ -146,6 +146,13 @@ def game_scene():
 
     # for score
     score = 0
+
+    score_text = stage.Text(width=29, height=14)
+    score_text.clear()
+    score_text.cursor(0,0)
+    score_text.move(1,1)
+    score_text.text("Score: {0}".format(score))
+
     # image banks for CircuitPython
     image_bank_background = stage.Bank.from_bmp16("space_aliens_background.bmp")
     image_bank_sprites = stage.Bank.from_bmp16("space_aliens.bmp")
@@ -192,11 +199,6 @@ def game_scene():
                                       constants.OFF_SCREEN_Y)
         lasers.append(a_single_laser)
 
-    # create a list to check if lasers are fired
-    lasers_fired = []
-    for laser in range(len(lasers)):
-        lasers_fired.append(False)
-
     # the 5 pixels on the PyBadge
     pixels = neopixel.NeoPixel(board.NEOPIXEL, 5, auto_write=False)
     for pixel in range(5):
@@ -207,7 +209,7 @@ def game_scene():
     # and set the fram rate to 60fps
     game = stage.Stage(ugame.display, constants.FPS)
     # set the layers of all sprites, items show up in order
-    game.layers = lasers + [ship] + aliens + [background]
+    game.layers = [score_text] + lasers + [ship] + aliens + [background]
     # render all sprites
     #   most likely you will only render the background once per game game_scene
     game.render_block()
@@ -258,9 +260,6 @@ def game_scene():
                 if lasers[laser_number].x <= -1: # checks if it's off the screen
                     lasers[laser_number].move(ship.x, ship.y)
                     sound.play(pew_sound)
-                    pixels[laser_number] = (10, 10, 0) # lights turn yellow
-                    pixels.show()
-                    lasers_fired[laser_number] = True
                     break
         
         # moves the lasers
@@ -269,29 +268,53 @@ def game_scene():
                 lasers[laser_number].move(lasers[laser_number].x,
                                           lasers[laser_number].y -
                                           constants.LASER_SPEED)
+                # checks if there is a laser on the screen
+                for laser in range(len(lasers)):
+                    if lasers[laser].x > -1 :
+                        for pixel in range(len(pixels)):
+                            if pixels[pixel] == (10, 10, 0) or all(lasers[laser_num].x > constants.OFF_SCREEN_X for laser_num in range(len(lasers))):
+                                break
+                            pixels[pixel] = (10, 10, 0) # lights turn yellow
+                            pixels.show()
+                
                 if lasers[laser_number].y < constants.OFF_TOP_SCREEN: # checks if it's off the screen
                     lasers[laser_number].move(constants.OFF_SCREEN_X,
                                               constants.OFF_SCREEN_Y)
-                    pixels[laser_number] = (0, 10, 0) # lights turn green
-                    pixels.show()
-                    lasers_fired[laser_number] = False
 
-        # checks if it's out of lasers
-        if all(laser == True for laser in lasers_fired):
+        # checks if the lasers are full
+        if all(lasers[laser].x == constants.OFF_SCREEN_X for laser in range(len(lasers))):
             for pixel in range(len(pixels)):
+                if pixels[pixel] == (0, 10, 0):
+                    break
+                pixels[pixel] = (0, 10, 0) # lights turn green
+                pixels.show()
+        
+        # checks if it's out of lasers
+        if all(lasers[laser].x > constants.OFF_SCREEN_X for laser in range(len(lasers))):
+            for pixel in range(len(pixels)):
+                if pixels[pixel] == (10, 0, 0):
+                    break
                 pixels[pixel] = (10, 0, 0) # lights turn red
                 pixels.show()
         
         # each frame move the aliens down, that are on the screen
         for alien_number in range(len(aliens)):
             if aliens[alien_number].x > 0:
-                      aliens[alien_number].move(aliens[alien_number].x,
-                                                aliens[alien_number].y +
-                                                constants.ALIEN_SPEED)
-                      if aliens[alien_number].y > constants.SCREEN_Y:
-                          aliens[alien_number].move(constants.OFF_SCREEN_X,
-                                                    constants.OFF_SCREEN_Y)
-                      show_alien()
+                aliens[alien_number].move(aliens[alien_number].x,
+                                          aliens[alien_number].y +
+                                          constants.ALIEN_SPEED)
+                if aliens[alien_number].y > constants.SCREEN_Y:
+                    aliens[alien_number].move(constants.OFF_SCREEN_X,
+                                              constants.OFF_SCREEN_Y)
+                    show_alien()
+                    score -= 1
+                    if score < 0:
+                        score = 0
+                    score_text.clear()
+                    score_text.cursor(0,0)
+                    score_text.move(1,1)
+                    score_text.text("Score: {0}".format(score))
+
         # each frame check if any of the lasers are touching any of the aliens
         for laser_number in range(len(lasers)):
             if lasers[laser_number].x > 0:
@@ -309,6 +332,10 @@ def game_scene():
                             show_alien()
                             show_alien()
                             score += 1
+                            score_text.clear()
+                            score_text.cursor(0,0)
+                            score_text.move(1,1)
+                            score_text.text("Score: {0}".format(score))
         # redraw sprites
         game.render_sprites(lasers + [ship] + aliens)
         game.tick()
