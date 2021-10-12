@@ -308,6 +308,7 @@ def game_scene():
                             sound.play(boom_sound)
                             show_alien()
                             show_alien()
+                            score += 1
         # redraw sprites
         game.render_sprites(lasers + [ship] + aliens)
         game.tick()
