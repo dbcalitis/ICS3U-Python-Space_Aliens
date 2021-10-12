@@ -2,7 +2,7 @@
 
 # Created by: Daria Bernice Calitis
 # Created on: Oct 2021
-# This program is the "Space Aliens" program on the PyBadge
+# This program is the constants of "Space Aliens" program on the PyBadge
 
 # PyBadge screen size is 160x128 sprites are 16x16
 SCREEN_X = 160
