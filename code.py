@@ -8,6 +8,8 @@ import ugame
 import stage
 import time
 import random
+import board
+import neopixel
 
 import constants
 
@@ -163,11 +165,31 @@ def game_scene():
     alien = stage.Sprite(image_bank_sprites, 9,
                          int(constants.SCREEN_X / 2 - constants.SPRITE_SIZE / 2),
                          16)
+
+    # create list of lasers for when we shoot
+    lasers = []
+    for laser_number in range(constants.TOTAL_NUMBER_OF_LASERS):
+        a_single_laser = stage.Sprite(image_bank_sprites, 10,
+                                      constants.OFF_SCREEN_X,
+                                      constants.OFF_SCREEN_Y)
+        lasers.append(a_single_laser)
+
+    # create a list to check if lasers are fired
+    lasers_fired = []
+    for laser in range(len(lasers)):
+        lasers_fired.append(False)
+
+    # the 5 pixels on the PyBadge
+    pixels = neopixel.NeoPixel(board.NEOPIXEL, 5, auto_write=False)
+    for pixel in range(5):
+        pixels[pixel] = (0, 10, 0)
+    pixels.show()
+    
     # create a stage for the background to show up on
     # and set the fram rate to 60fps
     game = stage.Stage(ugame.display, constants.FPS)
     # set the layers of all sprites, items show up in order
-    game.layers = [ship] + [alien] + [background]
+    game.layers = lasers + [ship] + [alien] + [background]
     # render all sprites
     #   most likely you will only render the background once per game game_scene
     game.render_block()
@@ -197,12 +219,12 @@ def game_scene():
             pass
         if keys & ugame.K_RIGHT:
             if ship.x <= constants.SCREEN_X - constants.SPRITE_SIZE:
-                ship.move(ship.x + 1, ship.y)
+                ship.move(ship.x + constants.SHIP_SPEED, ship.y)
             else:
                 ship.move(ship.x, ship.y)  # stays in the same position as before
         if keys & ugame.K_LEFT:
             if ship.x >= 0:
-                ship.move(ship.x - 1, ship.y)
+                ship.move(ship.x - constants.SHIP_SPEED, ship.y)
             else:
                 ship.move(ship.x, ship.y)
         if keys & ugame.K_UP:
@@ -213,10 +235,37 @@ def game_scene():
         
         # update game logic
         if a_button == constants.button_state["button_just_pressed"]:
-            sound.play(pew_sound)
+            # fire a laser, if we have enough power (have not used up all the lasers)
+            for laser_number in range(len(lasers)):
+                if lasers[laser_number].x < 0: # checks if it's off the screen
+                    lasers[laser_number].move(ship.x, ship.y)
+                    sound.play(pew_sound)
+                    pixels[laser_number] = (10, 10, 0) # lights turn yellow
+                    pixels.show()
+                    lasers_fired[laser_number] = True
+                    break
+        
+        # moves the lasers
+        for laser_number in range(len(lasers)):
+            if lasers[laser_number].x > 0: # checks if it's on the screen
+                lasers[laser_number].move(lasers[laser_number].x,
+                                          lasers[laser_number].y -
+                                          constants.LASER_SPEED)
+                if lasers[laser_number].y < constants.OFF_TOP_SCREEN: # checks if it's off the screen
+                    lasers[laser_number].move(constants.OFF_SCREEN_X,
+                                              constants.OFF_SCREEN_Y)
+                    pixels[laser_number] = (0, 10, 0) # lights turn green
+                    pixels.show()
+                    lasers_fired[laser_number] = False
+
+        # checks if it's out of lasers
+        if all(laser == True for laser in lasers_fired):
+            for pixel in range(len(pixels)):
+                pixels[pixel] = (10, 0, 0) # lights turn red
+                pixels.show()
 
         # redraw sprites
-        game.render_sprites([ship] + [alien])
+        game.render_sprites(lasers + [ship] + [alien])
         game.tick()
 
 if __name__ == "__main__":
